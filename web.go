@@ -88,7 +88,7 @@ func (ctx *Context) SetCookie(name string, value string, age int64) {
 		// 2^31 - 1 seconds (roughly 2038)
 		utctime = time.Unix(2147483647, 0).UTC()
 	} else {
-		utctime = time.Unix(time.Now().UTC().Seconds()+age, 0).UTC()
+		utctime = time.Now().Add( time.Duration(age)*time.Second ).UTC()
 	}
 	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
 	ctx.Header().Add("Set-Cookie", cookie)
@@ -116,7 +116,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 	encoder.Close()
 	vs := buf.String()
 	vb := buf.Bytes()
-	timestamp := strconv.FormatInt(time.Now(), 10)
+	timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
 	sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
 	ctx.SetCookie(name, cookie, age)
@@ -140,7 +140,7 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 
 		ts, _ := strconv.ParseInt(timestamp, 10, 64)
 
-		if time.Now().Sub(31*86400) > ts {
+		if time.Now().Sub( time.Unix(0, ts) ) > time.Duration(31*86400)*time.Second {
 			return "", false
 		}
 
